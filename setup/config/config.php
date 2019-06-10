@@ -4,7 +4,7 @@
 	// Initiate and load dotenv
 	// ========================
 	$root_dir   = dirname( __DIR__ );
-	$web_dir    = $root_dir . '/public_html';
+	$web_dir    = $root_dir . '/html';
 	
 	//Env::init();
 	$dotenv     = new Dotenv\Dotenv( $root_dir );

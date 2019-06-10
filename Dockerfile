@@ -39,6 +39,10 @@ RUN set -ex; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
 	rm -rf /var/lib/apt/lists/*
 
+# install nano for testing and debugging easier
+RUN apt-get update; \
+	apt-get install -y nano;
+
 # set recommended PHP.ini settings
 # see https://secure.php.net/manual/en/opcache.installation.php
 RUN { \
@@ -86,7 +90,14 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/latest-nl_NL.tar.gz; \
 	mv /usr/src/config /var/www/; \
 	mv /usr/src/vendor /var/www/; \
 	mv /usr/src/index.php /var/www/html/; \
-	mv /usr/src/wp-config.php /var/www/html/;
+	mv /usr/src/wp-config.php /var/www/html/; \
+	chown -R www-data:www-data /var/www; \
+	find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
+
+# set the keys in the env file to be random
+RUN curl http://api.visual-masters.nl/env/ -o /var/www/salts.txt; \
+	sed -i -e '/WPSALTS/{r /var/www/salts.txt' -e 'd' -e ' }' /var/www/.env; \
+	rm /var/www/salts.txt;
 
 # mount the volume
 VOLUME /var/www/html
