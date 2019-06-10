@@ -40,7 +40,7 @@
 	// Leave blank for American English
 	// WordPress sets this through database in newer versions
 	// ======================================================
-	define( 'WPLANG', '' );
+	define( 'WPLANG', 'nl_NL' );
 	
 	// =================
 	// Database settings
@@ -78,6 +78,14 @@
 	define( 'DISABLE_WP_CRON',              getenv('DISABLE_WP_CRON') ?: false);
 	define( 'AUTOMATIC_UPDATER_DISABLED',   getenv('AUTOMATIC_UPDATER_DISABLED') ?: false );
 	
+
+	// ===========================================
+	// Set transfer method for plugins and updates
+	// ===========================================
+	if(!defined('FS_METHOD')) {
+		define('FS_METHOD', 'direct');
+	}
+
 	// ========================
 	// Set environment variable
 	// ========================
