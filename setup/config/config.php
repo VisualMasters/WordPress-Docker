@@ -64,20 +64,6 @@
 	define('SECURE_AUTH_SALT',  getenv('SECURE_AUTH_SALT'));
 	define('LOGGED_IN_SALT',    getenv('LOGGED_IN_SALT'));
 	define('NONCE_SALT',        getenv('NONCE_SALT'));
-	
-	// =================================================================================
-	// Set update methods. Disable all WordPress updates in favor of Composer
-	// Also disable cron, in case you want to set it yourself, instead of at every visit
-	// =================================================================================
-	// WP UPDATE SETTINGS
-	// Enable all automatic updates through WordPress ( if Composer isn't an option )
-	// Use 'minor' for only minor updates, true for all, and false for none
-	// Remove auto-update for plugins in the base-theme, if required.
-	// =================================================================================
-	define( 'WP_AUTO_UPDATE_CORE',          getenv('WP_AUTO_UPDATE_CORE') ?: false );
-	define( 'DISABLE_WP_CRON',              getenv('DISABLE_WP_CRON') ?: false);
-	define( 'AUTOMATIC_UPDATER_DISABLED',   getenv('AUTOMATIC_UPDATER_DISABLED') ?: false );
-	
 
 	// ===========================================
 	// Set transfer method for plugins and updates
