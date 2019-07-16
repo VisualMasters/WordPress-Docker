@@ -1,4 +1,4 @@
-FROM php:7.2-apache
+FROM php:7.3-apache
 LABEL maintainer="justin@visualmasters.nl"
 
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
