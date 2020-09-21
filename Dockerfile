@@ -76,7 +76,7 @@ RUN a2enmod rewrite expires
 COPY setup /usr/src
 
 # get wordpress and push it to the correct location
-RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.3.2-nl_NL.tar.gz; \
+RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.5.1-nl_NL.tar.gz; \
 	tar -xzf wordpress.tar.gz; \
 	rm wordpress.tar.gz; \
 	mv wordpress/* ./; \
