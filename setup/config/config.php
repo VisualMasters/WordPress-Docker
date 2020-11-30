@@ -16,7 +16,8 @@
 	// ================
 	// Define variables
 	// ================
-	define( 'WP_ENV', getenv( 'WP_ENV' ) ?: 'production' );
+	define( 'WP_ENVIRONMENT_TYPE', getenv( 'WP_ENVIRONMENT_TYPE' ) ?: 'production' );
+
 	
 	// ===============
 	// Error handling
@@ -35,13 +36,6 @@
 	define( 'WP_HOME',          getenv( 'WP_HOME' ) );
 	define( 'WP_SITEURL',       getenv( 'WP_SITEURL' ) );
 	
-	// ======================================================
-	// Language
-	// Leave blank for American English
-	// WordPress sets this through database in newer versions
-	// ======================================================
-	define( 'WPLANG', 'nl_NL' );
-	
 	// =================
 	// Database settings
 	// =================
@@ -51,7 +45,7 @@
 	define('DB_HOST',       getenv('DB_HOST') ?: 'localhost');
 	define('DB_CHARSET',    'utf8mb4');
 	define('DB_COLLATE',    '');
-	$table_prefix  =        getenv('DB_PREFIX') ?: 'vm_';
+	$table_prefix  =        getenv('DB_PREFIX') ?: 'vmst_';
 	
 	// ===================
 	// Auth keys and Salts
@@ -78,3 +72,4 @@
 	if (!defined('ABSPATH')) {
 	    define('ABSPATH', $web_dir . '/wp/');
 	}
+	
