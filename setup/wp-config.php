@@ -14,5 +14,4 @@
 	
 	// Setup configuration and load WordPress
 	require_once( dirname(__DIR__) . '/config/config.php' );
-	require_once( dirname(__DIR__) . '/config/licenses.php' );
 	require_once( ABSPATH . 'wp-settings.php' );

@@ -72,4 +72,13 @@
 	if (!defined('ABSPATH')) {
 	    define('ABSPATH', $web_dir . '/wp/');
 	}
-	
+
+    // ===============
+	// Define licenses
+	// ===============
+    define( 'GF_LICENSE_KEY', getenv( 'LICENSE_GRAVITYFORMS' ) ?: '' );
+    define( 'SHORTPIXEL_API_KEY', getenv( 'LICENSE_AKISMET' ) ?: '' );
+    define( 'WPCOM_API_KEY', getenv( 'LICENSE_SHORTPIXEL' ) ?: '' );
+    define( 'ACF_PRO_LICENSE', getenv( 'LICENSE_ACF' ) ?: '' );
+    define( 'WP_ROCKET_KEY', getenv( 'LICENSE_WPROCKET' ) ?: '' );
+    define( 'WP_ROCKET_EMAIL', getenv( 'LICENSE_WPROCKET_EMAIL' ) ?: '' );
