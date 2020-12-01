@@ -99,7 +99,7 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.5.3-nl_NL.tar.
 # set the keys in the env file to be random
 RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
 	sed -i -e '/WPSALTS/{r /var/www/salts.txt' -e 'd' -e ' }' /var/www/.env; \
-	rm /var/www/salts.txt \
+	rm /var/www/salts.txt; \
 	curl https://api.burovoordeboeg.nl/env/licenses.php -o /var/www/licenses.txt; \
 	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/licenses.txt;
