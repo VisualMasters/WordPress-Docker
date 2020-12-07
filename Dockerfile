@@ -96,6 +96,11 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.5.3-nl_NL.tar.
 	chown -R www-data:www-data /var/www; \
 	find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
 
+# install WP CLI
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar; \
+	chmod +x wp-cli.phar; \
+	mv wp-cli.phar /usr/local/bin/wp;
+
 # set the keys in the env file to be random
 RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
 	sed -i -e '/WPSALTS/{r /var/www/salts.txt' -e 'd' -e ' }' /var/www/.env; \
