@@ -1,4 +1,4 @@
-FROM php:7.4-fpm
+FROM php:7.4-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
@@ -8,6 +8,7 @@ RUN set -ex; \
 	\
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
+		nano \
 		libfreetype6-dev \
 		libicu-dev \
 		libjpeg-dev \
