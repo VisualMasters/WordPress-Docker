@@ -1,5 +1,5 @@
-FROM php:7.3-apache
-LABEL maintainer="justin@visualmasters.nl"
+FROM php:7.4-fpm
+LABEL maintainer="justin@burovoordeboeg.nl"
 
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 RUN set -ex; \
@@ -8,75 +8,91 @@ RUN set -ex; \
 	\
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
-	libjpeg-dev \
-	libmagickwand-dev \
-	libpng-dev \
-	libzip-dev \
+		libfreetype6-dev \
+		libicu-dev \
+		libjpeg-dev \
+		libmagickwand-dev \
+		libpng-dev \
+		libwebp-dev \
+		libzip-dev \
 	; \
 	\
-	docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr; \
-	docker-php-ext-install \
-	bcmath \
-	exif \
-	gd \
-	mysqli \
-	opcache \
-	zip \
+	docker-php-ext-configure gd \
+		--with-freetype \
+		--with-jpeg \
+		--with-webp \
 	; \
-	pecl install imagick-3.4.4; \
+	docker-php-ext-install -j "$(nproc)" \
+		bcmath \
+		exif \
+		gd \
+		intl \
+		mysqli \
+		zip \
+	; \
+# https://pecl.php.net/package/imagick
+	pecl install imagick-3.6.0; \
 	docker-php-ext-enable imagick; \
+	rm -r /tmp/pear; \
 	\
-	# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# some misbehaving extensions end up outputting to stdout 🙈 (https://github.com/docker-library/wordpress/issues/669#issuecomment-993945967)
+	out="$(php -r 'exit(0);')"; \
+	[ -z "$out" ]; \
+	err="$(php -r 'exit(0);' 3>&1 1>&2 2>&3)"; \
+	[ -z "$err" ]; \
+	\
+	extDir="$(php -r 'echo ini_get("extension_dir");')"; \
+	[ -d "$extDir" ]; \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
 	apt-mark auto '.*' > /dev/null; \
 	apt-mark manual $savedAptMark; \
-	ldd "$(php -r 'echo ini_get("extension_dir");')"/*.so \
-	| awk '/=>/ { print $3 }' \
-	| sort -u \
-	| xargs -r dpkg-query -S \
-	| cut -d: -f1 \
-	| sort -u \
-	| xargs -rt apt-mark manual; \
+	ldd "$extDir"/*.so \
+		| awk '/=>/ { print $3 }' \
+		| sort -u \
+		| xargs -r dpkg-query -S \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -rt apt-mark manual; \
 	\
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	rm -rf /var/lib/apt/lists/*
-
-# install nano for testing and debugging easier 
-RUN apt-get update; \
-	apt-get install -y nano;
+	rm -rf /var/lib/apt/lists/*; \
+	\
+	! { ldd "$extDir"/*.so | grep 'not found'; }; \
+# check for output like "PHP Warning:  PHP Startup: Unable to load dynamic library 'foo' (tried: ...)
+	err="$(php --version 3>&1 1>&2 2>&3)"; \
+	[ -z "$err" ]
 
 # set recommended PHP.ini settings
 # see https://secure.php.net/manual/en/opcache.installation.php
-RUN { \
-	echo 'opcache.memory_consumption=128'; \
-	echo 'opcache.interned_strings_buffer=8'; \
-	echo 'opcache.max_accelerated_files=4000'; \
-	echo 'opcache.revalidate_freq=2'; \
-	echo 'opcache.fast_shutdown=1'; \
-	echo 'opcache.enable_cli=1'; \
+RUN set -eux; \
+	docker-php-ext-enable opcache; \
+	{ \
+		echo 'opcache.memory_consumption=128'; \
+		echo 'opcache.interned_strings_buffer=8'; \
+		echo 'opcache.max_accelerated_files=4000'; \
+		echo 'opcache.revalidate_freq=2'; \
+		echo 'opcache.fast_shutdown=1'; \
 	} > /usr/local/etc/php/conf.d/opcache-recommended.ini
-# https://codex.wordpress.org/Editing_wp-config.php#Configure_Error_Logging
+# https://wordpress.org/support/article/editing-wp-config-php/#configure-error-logging
 RUN { \
-	echo 'error_reporting = 4339'; \
-	echo 'display_errors = Off'; \
-	echo 'display_startup_errors = Off'; \
-	echo 'log_errors = On'; \
-	echo 'error_log = /dev/stderr'; \
-	echo 'log_errors_max_len = 1024'; \
-	echo 'ignore_repeated_errors = On'; \
-	echo 'ignore_repeated_source = Off'; \
-	echo 'html_errors = Off'; \	
-	echo 'post_max_size = 1024M'; \
-	echo 'upload_max_filesize = 1024M'; \
-	echo 'memory_limit = 1024M'; \
+# https://www.php.net/manual/en/errorfunc.constants.php
+# https://github.com/docker-library/wordpress/issues/420#issuecomment-517839670
+		echo 'error_reporting = E_ERROR | E_WARNING | E_PARSE | E_CORE_ERROR | E_CORE_WARNING | E_COMPILE_ERROR | E_COMPILE_WARNING | E_RECOVERABLE_ERROR'; \
+		echo 'display_errors = Off'; \
+		echo 'display_startup_errors = Off'; \
+		echo 'log_errors = On'; \
+		echo 'error_log = /dev/stderr'; \
+		echo 'log_errors_max_len = 1024'; \
+		echo 'ignore_repeated_errors = On'; \
+		echo 'ignore_repeated_source = Off'; \
+		echo 'html_errors = Off'; \
 	} > /usr/local/etc/php/conf.d/error-logging.ini
-
-RUN a2enmod rewrite expires
 
 # move the installation files
 COPY setup /usr/src
 
 # get wordpress and push it to the correct location
-RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.8-nl_NL.tar.gz; \
+RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.9-nl_NL.tar.gz; \
 	tar -xzf wordpress.tar.gz; \
 	rm wordpress.tar.gz; \
 	mv wordpress/* ./; \
@@ -108,6 +124,23 @@ RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
 	curl https://api.burovoordeboeg.nl/env/licenses.php -o /var/www/licenses.txt; \
 	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/licenses.txt;
+
+# https://wordpress.org/support/article/htaccess/
+RUN set -eux; \
+	[ ! -e /var/www/html/.htaccess ]; \
+	{ \
+		echo '# BEGIN WordPress'; \
+		echo ''; \
+		echo 'RewriteEngine On'; \
+		echo 'RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]'; \
+		echo 'RewriteBase /'; \
+		echo 'RewriteRule ^index\.php$ - [L]'; \
+		echo 'RewriteCond %{REQUEST_FILENAME} !-f'; \
+		echo 'RewriteCond %{REQUEST_FILENAME} !-d'; \
+		echo 'RewriteRule . /index.php [L]'; \
+		echo ''; \
+		echo '# END WordPress'; \
+	} > /var/www/html/.htaccess;
 
 # mount the volume
 VOLUME /var/www/html
