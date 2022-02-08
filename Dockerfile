@@ -1,6 +1,19 @@
 FROM php:7.4-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
+# persistent dependencies
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+# Ghostscript is required for rendering PDF previews
+		ghostscript \
+	; \
+	rm -rf /var/lib/apt/lists/*
+
+# install nano for testing and debugging easier 
+RUN apt-get update; \
+	apt-get install -y nano;
+
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 RUN set -ex; \
 	\
@@ -8,7 +21,6 @@ RUN set -ex; \
 	\
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
-		nano \
 		libfreetype6-dev \
 		libicu-dev \
 		libjpeg-dev \
@@ -89,6 +101,22 @@ RUN { \
 		echo 'html_errors = Off'; \
 	} > /usr/local/etc/php/conf.d/error-logging.ini
 
+RUN set -eux; \
+	a2enmod rewrite expires; \
+	\
+# https://httpd.apache.org/docs/2.4/mod/mod_remoteip.html
+	a2enmod remoteip; \
+	{ \
+		echo 'RemoteIPHeader X-Forwarded-For'; \
+# these IP ranges are reserved for "private" use and should thus *usually* be safe inside Docker
+		echo 'RemoteIPTrustedProxy 10.0.0.0/8'; \
+		echo 'RemoteIPTrustedProxy 172.16.0.0/12'; \
+		echo 'RemoteIPTrustedProxy 192.168.0.0/16'; \
+		echo 'RemoteIPTrustedProxy 169.254.0.0/16'; \
+		echo 'RemoteIPTrustedProxy 127.0.0.0/8'; \
+	} > /etc/apache2/conf-available/remoteip.conf; \
+	a2enconf remoteip;
+
 # move the installation files
 COPY setup /usr/src
 
@@ -110,6 +138,23 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.9-nl_NL.tar.gz
 	mv /usr/src/vendor /var/www/; \
 	mv /usr/src/index.php /var/www/html/; \
 	mv /usr/src/wp-config.php /var/www/html/; \
+	\
+# https://wordpress.org/support/article/htaccess/
+	[ ! -e /var/www/html/.htaccess ]; \
+	{ \
+		echo '# BEGIN WordPress'; \
+		echo ''; \
+		echo 'RewriteEngine On'; \
+		echo 'RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]'; \
+		echo 'RewriteBase /'; \
+		echo 'RewriteRule ^index\.php$ - [L]'; \
+		echo 'RewriteCond %{REQUEST_FILENAME} !-f'; \
+		echo 'RewriteCond %{REQUEST_FILENAME} !-d'; \
+		echo 'RewriteRule . /index.php [L]'; \
+		echo ''; \
+		echo '# END WordPress'; \
+	} > /var/www/html/.htaccess; \
+	\
 	chown -R www-data:www-data /var/www; \
 	find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
 
@@ -125,23 +170,6 @@ RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
 	curl https://api.burovoordeboeg.nl/env/licenses.php -o /var/www/licenses.txt; \
 	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/licenses.txt;
-
-# https://wordpress.org/support/article/htaccess/
-RUN set -eux; \
-	[ ! -e /var/www/html/.htaccess ]; \
-	{ \
-		echo '# BEGIN WordPress'; \
-		echo ''; \
-		echo 'RewriteEngine On'; \
-		echo 'RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]'; \
-		echo 'RewriteBase /'; \
-		echo 'RewriteRule ^index\.php$ - [L]'; \
-		echo 'RewriteCond %{REQUEST_FILENAME} !-f'; \
-		echo 'RewriteCond %{REQUEST_FILENAME} !-d'; \
-		echo 'RewriteRule . /index.php [L]'; \
-		echo ''; \
-		echo '# END WordPress'; \
-	} > /var/www/html/.htaccess;
 
 # mount the volume
 VOLUME /var/www/html
