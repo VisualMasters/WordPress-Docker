@@ -86,6 +86,7 @@ RUN set -eux; \
 		echo 'opcache.revalidate_freq=2'; \
 		echo 'opcache.fast_shutdown=1'; \
 	} > /usr/local/etc/php/conf.d/opcache-recommended.ini
+	
 # https://wordpress.org/support/article/editing-wp-config-php/#configure-error-logging
 RUN { \
 # https://www.php.net/manual/en/errorfunc.constants.php
@@ -100,6 +101,15 @@ RUN { \
 		echo 'ignore_repeated_source = Off'; \
 		echo 'html_errors = Off'; \
 	} > /usr/local/etc/php/conf.d/error-logging.ini
+
+# https://stackoverflow.com/questions/42983276/wordpress-docker-wont-increase-upload-limit
+RUN { \
+		echo 'file_uploads = On'; \
+		echo 'memory_limit = 500M'; \
+		echo 'upload_max_filesize = 500M'; \
+		echo 'post_max_size = 500M'; \
+		echo 'max_execution_time = 600'; \
+	} > /usr/local/etc/php/conf.d/uploads.ini
 
 RUN set -eux; \
 	a2enmod rewrite expires; \
