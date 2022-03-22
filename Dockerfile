@@ -139,7 +139,6 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.9-nl_NL.tar.gz
 	mkdir wp; \
 	chown -R www-data:www-data wp; \
 	mv -t wp/ *.txt *.html *.php wp-admin wp-includes; \
-	rm wp/index.php; \
 	mv wp-content content; \
 	rm -R -- content/themes/*/; \
 	rm -rf content/plugins/hello.php content/plugins/akismet; \
