@@ -131,7 +131,7 @@ RUN set -eux; \
 COPY setup /usr/src
 
 # get wordpress and push it to the correct location
-RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-5.9-nl_NL.tar.gz; \
+RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.0-nl_NL.tar.gz; \
 	tar -xzf wordpress.tar.gz; \
 	rm wordpress.tar.gz; \
 	mv wordpress/* ./; \
