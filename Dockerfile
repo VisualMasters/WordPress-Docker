@@ -147,6 +147,7 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.0-nl_NL.tar.gz
 	mv /usr/src/vendor /var/www/; \
 	mv /usr/src/index.php /var/www/html/; \
 	mv /usr/src/wp-config.php /var/www/html/; \
+	mv /usr/src/ray.php /var/www/html/; \
 	\
 # https://wordpress.org/support/article/htaccess/
 	[ ! -e /var/www/html/.htaccess ]; \
