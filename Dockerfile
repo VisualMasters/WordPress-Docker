@@ -177,7 +177,7 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
 	sed -i -e '/WPSALTS/{r /var/www/salts.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/salts.txt; \
-	curl https://api.burovoordeboeg.nl/env/licenses.php -o /var/www/licenses.txt; \
+	curl https://api.burovoordeboeg.nl/env/licenses.php?newlines -o /var/www/licenses.txt; \
 	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/licenses.txt;
 
