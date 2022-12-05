@@ -1,4 +1,4 @@
-FROM php:7.4-apache
+FROM php:7.4.11-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
 # persistent dependencies
@@ -131,7 +131,7 @@ RUN set -eux; \
 COPY setup /usr/src
 
 # get wordpress and push it to the correct location
-RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.0-nl_NL.tar.gz; \
+RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.1.1-nl_NL.tar.gz; \
 	tar -xzf wordpress.tar.gz; \
 	rm wordpress.tar.gz; \
 	mv wordpress/* ./; \

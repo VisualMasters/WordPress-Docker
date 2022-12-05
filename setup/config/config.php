@@ -55,6 +55,11 @@
 	define('DB_CHARSET',    'utf8mb4');
 	define('DB_COLLATE',    '');
 	$table_prefix  =        getenv('DB_PREFIX') ?: 'vmst_';
+
+	/**
+	 * Disable core themes
+	 */
+	define('CORE_UPGRADE_SKIP_NEW_BUNDLED', true);
 	
 	/**
 	 * Auth keys and Salts
