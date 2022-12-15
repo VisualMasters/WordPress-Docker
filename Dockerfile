@@ -1,4 +1,4 @@
-FROM php:7.4.11-apache
+FROM php:8.0.26-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
 # persistent dependencies
@@ -163,10 +163,7 @@ RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.1.1-nl_NL.tar.
 		echo 'RewriteRule . /index.php [L]'; \
 		echo ''; \
 		echo '# END WordPress'; \
-	} > /var/www/html/.htaccess; \
-	\
-	chown -R www-data:www-data /var/www; \
-	find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
+	} > /var/www/html/.htaccess;
 
 # install WP CLI
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar; \
@@ -180,6 +177,9 @@ RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
 	curl https://api.burovoordeboeg.nl/env/licenses.php?newlines -o /var/www/licenses.txt; \
 	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/licenses.txt;
+
+RUN chown -R www-data:www-data /var/www; \
+	find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
 
 # mount the volume
 VOLUME /var/www/html
