@@ -1,4 +1,4 @@
-FROM php:8.0.26-apache
+FROM php:8.1-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
 # persistent dependencies
@@ -131,7 +131,7 @@ RUN set -eux; \
 COPY setup /usr/src
 
 # get wordpress and push it to the correct location
-RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.1.1-nl_NL.tar.gz; \
+RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.3-nl_NL.tar.gz; \
 	tar -xzf wordpress.tar.gz; \
 	rm wordpress.tar.gz; \
 	mv wordpress/* ./; \
@@ -171,10 +171,10 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 	mv wp-cli.phar /usr/local/bin/wp;
 
 # set the keys in the env file to be random
-RUN curl https://api.burovoordeboeg.nl/env/ -o /var/www/salts.txt; \
+RUN curl https://api.burovoordeboeg.nl/env/ -u "burovoordeboeg:BuroBoeg" -k -o /var/www/salts.txt; \
 	sed -i -e '/WPSALTS/{r /var/www/salts.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/salts.txt; \
-	curl https://api.burovoordeboeg.nl/env/licenses.php?newlines -o /var/www/licenses.txt; \
+	curl https://api.burovoordeboeg.nl/env/licenses.php?newlines -u "burovoordeboeg:BuroBoeg" -k -o /var/www/licenses.txt; \
 	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
 	rm /var/www/licenses.txt;
 
