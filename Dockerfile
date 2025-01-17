@@ -11,6 +11,10 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
+# Install nano for easier testing and debugging
+RUN apt-get update; \
+    apt-get install -y nano
+
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 RUN set -ex; \
 	\
