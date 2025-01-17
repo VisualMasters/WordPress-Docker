@@ -1,3 +1,4 @@
+
 FROM php:8.1-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
@@ -10,10 +11,6 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-# install nano for testing and debugging easier 
-RUN apt-get update; \
-	apt-get install -y nano;
-
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 RUN set -ex; \
 	\
@@ -21,6 +18,7 @@ RUN set -ex; \
 	\
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
+		libavif-dev \
 		libfreetype6-dev \
 		libicu-dev \
 		libjpeg-dev \
@@ -31,6 +29,7 @@ RUN set -ex; \
 	; \
 	\
 	docker-php-ext-configure gd \
+		--with-avif \
 		--with-freetype \
 		--with-jpeg \
 		--with-webp \
@@ -69,9 +68,9 @@ RUN set -ex; \
 	apt-mark auto '.*' > /dev/null; \
 	apt-mark manual $savedAptMark; \
 	ldd "$extDir"/*.so \
-		| awk '/=>/ { print $3 }' \
+		| awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); printf "*%s\n", so }' \
 		| sort -u \
-		| xargs -r dpkg-query -S \
+		| xargs -r dpkg-query --search \
 		| cut -d: -f1 \
 		| sort -u \
 		| xargs -rt apt-mark manual; \
@@ -93,9 +92,7 @@ RUN set -eux; \
 		echo 'opcache.interned_strings_buffer=8'; \
 		echo 'opcache.max_accelerated_files=4000'; \
 		echo 'opcache.revalidate_freq=2'; \
-		echo 'opcache.fast_shutdown=1'; \
 	} > /usr/local/etc/php/conf.d/opcache-recommended.ini
-	
 # https://wordpress.org/support/article/editing-wp-config-php/#configure-error-logging
 RUN { \
 # https://www.php.net/manual/en/errorfunc.constants.php
@@ -111,15 +108,6 @@ RUN { \
 		echo 'html_errors = Off'; \
 	} > /usr/local/etc/php/conf.d/error-logging.ini
 
-# https://stackoverflow.com/questions/42983276/wordpress-docker-wont-increase-upload-limit
-RUN { \
-		echo 'file_uploads = On'; \
-		echo 'memory_limit = 500M'; \
-		echo 'upload_max_filesize = 500M'; \
-		echo 'post_max_size = 500M'; \
-		echo 'max_execution_time = 600'; \
-	} > /usr/local/etc/php/conf.d/uploads.ini
-
 RUN set -eux; \
 	a2enmod rewrite expires; \
 	\
@@ -128,69 +116,76 @@ RUN set -eux; \
 	{ \
 		echo 'RemoteIPHeader X-Forwarded-For'; \
 # these IP ranges are reserved for "private" use and should thus *usually* be safe inside Docker
-		echo 'RemoteIPTrustedProxy 10.0.0.0/8'; \
-		echo 'RemoteIPTrustedProxy 172.16.0.0/12'; \
-		echo 'RemoteIPTrustedProxy 192.168.0.0/16'; \
-		echo 'RemoteIPTrustedProxy 169.254.0.0/16'; \
-		echo 'RemoteIPTrustedProxy 127.0.0.0/8'; \
+		echo 'RemoteIPInternalProxy 10.0.0.0/8'; \
+		echo 'RemoteIPInternalProxy 172.16.0.0/12'; \
+		echo 'RemoteIPInternalProxy 192.168.0.0/16'; \
+		echo 'RemoteIPInternalProxy 169.254.0.0/16'; \
+		echo 'RemoteIPInternalProxy 127.0.0.0/8'; \
 	} > /etc/apache2/conf-available/remoteip.conf; \
-	a2enconf remoteip;
+	a2enconf remoteip; \
+# https://github.com/docker-library/wordpress/issues/383#issuecomment-507886512
+# (replace all instances of "%h" with "%a" in LogFormat)
+	find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's/([[:space:]]*LogFormat[[:space:]]+"[^"]*)%h([^"]*")/\1%a\2/g' '{}' +
 
-# move the installation files
+# Move the installation files
 COPY setup /usr/src
 
-# get wordpress and push it to the correct location
-RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.3-nl_NL.tar.gz; \
-	tar -xzf wordpress.tar.gz; \
-	rm wordpress.tar.gz; \
-	mv wordpress/* ./; \
-	rm -rf wordpress; \
-	mkdir wp; \
-	chown -R www-data:www-data wp; \
-	mv -t wp/ *.txt *.html *.php wp-admin wp-includes; \
-	mv wp-content content; \
-	rm -R -- content/themes/*/; \
-	rm -rf content/plugins/hello.php content/plugins/akismet; \
-	mv /usr/src/.env /var/www/; \
-	mv /usr/src/config /var/www/; \
-	mv /usr/src/vendor /var/www/; \
-	mv /usr/src/index.php /var/www/html/; \
-	mv /usr/src/wp-config.php /var/www/html/; \
-	mv /usr/src/ray.php /var/www/html/; \
-	\
-# https://wordpress.org/support/article/htaccess/
-	[ ! -e /var/www/html/.htaccess ]; \
-	{ \
-		echo '# BEGIN WordPress'; \
-		echo ''; \
-		echo 'RewriteEngine On'; \
-		echo 'RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]'; \
-		echo 'RewriteBase /'; \
-		echo 'RewriteRule ^index\.php$ - [L]'; \
-		echo 'RewriteCond %{REQUEST_FILENAME} !-f'; \
-		echo 'RewriteCond %{REQUEST_FILENAME} !-d'; \
-		echo 'RewriteRule . /index.php [L]'; \
-		echo ''; \
-		echo '# END WordPress'; \
-	} > /var/www/html/.htaccess;
+# Get WordPress and push it to the correct location
+RUN curl -o wordpress.tar.gz https://nl.wordpress.org/wordpress-6.7.1-nl_NL.tar.gz; \
+    tar -xzf wordpress.tar.gz; \
+    rm wordpress.tar.gz; \
+    mv wordpress/* ./; \
+    rm -rf wordpress; \
+    mkdir wp; \
+    chown -R www-data:www-data wp; \
+    mv -t wp/ *.txt *.html *.php wp-admin wp-includes; \
+    mv wp-content content; \
+    rm -R -- content/themes/*/; \
+    rm -rf content/plugins/hello.php content/plugins/akismet; \
+    mv /usr/src/.env /var/www/; \
+    mv /usr/src/config /var/www/; \
+    mv /usr/src/vendor /var/www/; \
+    mv /usr/src/index.php /var/www/html/; \
+    mv /usr/src/wp-config.php /var/www/html/; \
+    mv /usr/src/ray.php /var/www/html/; \
+    [ ! -e /var/www/html/.htaccess ]; \
+    { \
+        echo '# BEGIN WordPress'; \
+        echo ''; \
+        echo 'RewriteEngine On'; \
+        echo 'RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]'; \
+        echo 'RewriteBase /'; \
+        echo 'RewriteRule ^index\.php$ - [L]'; \
+        echo 'RewriteCond %{REQUEST_FILENAME} !-f'; \
+        echo 'RewriteCond %{REQUEST_FILENAME} !-d'; \
+        echo 'RewriteRule . /index.php [L]'; \
+        echo ''; \
+        echo '# END WordPress'; \
+    } > /var/www/html/.htaccess
 
-# install WP CLI
+# Install WP CLI
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar; \
-	chmod +x wp-cli.phar; \
-	mv wp-cli.phar /usr/local/bin/wp;
+    chmod +x wp-cli.phar; \
+    mv wp-cli.phar /usr/local/bin/wp
 
-# set the keys in the env file to be random
-RUN curl https://api.burovoordeboeg.nl/env/ -u "burovoordeboeg:BuroBoeg" -k -o /var/www/salts.txt; \
-	sed -i -e '/WPSALTS/{r /var/www/salts.txt' -e 'd' -e ' }' /var/www/.env; \
-	rm /var/www/salts.txt; \
-	curl https://api.burovoordeboeg.nl/env/licenses.php?newlines -u "burovoordeboeg:BuroBoeg" -k -o /var/www/licenses.txt; \
-	sed -i -e '/WPLICENSES/{r /var/www/licenses.txt' -e 'd' -e ' }' /var/www/.env; \
-	rm /var/www/licenses.txt;
+# Set the keys in the env file to be random
+RUN echo "Downloading salts" && \
+    curl -A "BuroBoeg" -fsSL https://api.burovoordeboeg.nl/env/ -u "burovoordeboeg:BuroBoeg" -k -o /var/www/salts.txt && \
+    echo "Salts downloaded successfully" && \
+    sed -i '/WPSALTS/r /var/www/salts.txt' /var/www/.env && \
+    sed -i '/WPSALTS/d' /var/www/.env && \
+    rm /var/www/salts.txt && \
+    echo "Downloading licenses" && \
+    curl -A "BuroBoeg" -fsSL https://api.burovoordeboeg.nl/env/licenses.php?newlines -u "burovoordeboeg:BuroBoeg" -k -o /var/www/licenses.txt && \
+    echo "Licenses downloaded successfully" && \
+    sed -i '/WPLICENSES/r /var/www/licenses.txt' /var/www/.env && \
+    sed -i '/WPLICENSES/d' /var/www/.env && \
+    rm /var/www/licenses.txt
 
 RUN chown -R www-data:www-data /var/www; \
-	find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
+    find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \;
 
-# mount the volume
+# Mount the volume
 VOLUME /var/www/html
 
 CMD ["apache2-foreground"]
