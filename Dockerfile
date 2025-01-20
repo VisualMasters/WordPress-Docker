@@ -1,5 +1,4 @@
-
-FROM php:8.1-apache
+FROM php:8.2-apache
 LABEL maintainer="justin@burovoordeboeg.nl"
 
 # persistent dependencies
@@ -94,9 +93,25 @@ RUN set -eux; \
 	{ \
 		echo 'opcache.memory_consumption=128'; \
 		echo 'opcache.interned_strings_buffer=8'; \
-		echo 'opcache.max_accelerated_files=4000'; \
+		echo 'opcache.max_accelerated_files=10000'; \
+		echo 'opcache.validate_timestamps=1'; \
 		echo 'opcache.revalidate_freq=2'; \
+		echo 'opcache.fast_shutdown=1'; \
+		echo 'opcache.enable_cli=1'; \
 	} > /usr/local/etc/php/conf.d/opcache-recommended.ini
+
+# Set recommended PHP.ini settings
+RUN set -eux; \
+    { \
+        echo 'upload_max_filesize=64M'; \
+        echo 'post_max_size=64M'; \
+        echo 'memory_limit=256M'; \
+        echo 'max_execution_time=300'; \
+        echo 'max_input_time=300'; \
+        echo 'max_input_vars=1000'; \
+        echo 'default_socket_timeout=60'; \
+    } > /usr/local/etc/php/conf.d/custom-php.ini
+
 # https://wordpress.org/support/article/editing-wp-config-php/#configure-error-logging
 RUN { \
 # https://www.php.net/manual/en/errorfunc.constants.php
